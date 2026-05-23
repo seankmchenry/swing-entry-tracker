@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Swing Entry Tracker (Filtered Engine)</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="config.js"></script>
+</head>
+<body class="bg-gray-950 text-white font-sans min-h-screen">
+
+  <div class="p-6 max-w-6xl mx-auto">
+    <div class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-emerald-400">⚡ Swing Entry Tracker</h1>
+        <p class="text-xs text-gray-400 mt-1">90-Day Macro Lookback with a 30% Low-Volume Price Filter</p>
+      </div>
+    </div>
+
+    <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 mb-6 flex flex-col sm:flex-row gap-4 items-center">
+      <div class="flex gap-4 w-full sm:w-auto flex-grow">
+        <input type="text" id="tickerInput" placeholder="Enter Ticker (e.g. CIFR)" class="bg-gray-950 border border-gray-700 rounded-lg px-4 py-2 uppercase text-white font-mono focus:outline-none focus:border-emerald-500 flex-grow" />
+        <button onclick="handleCalculateLocal()" id="submitBtn" class="bg-emerald-600 hover:bg-emerald-500 text-gray-950 font-bold px-6 py-2 rounded-lg transition-colors flex items-center justify-center min-w-[120px]">
+          Add Ticker
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-gray-800 pt-4 sm:pt-0">
+        <label for="sortSelect" class="text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort By:</label>
+        <select id="sortSelect" onchange="updateWatchlistListener()" class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 font-medium focus:outline-none focus:border-emerald-500 cursor-pointer">
+          <option value="ticker-asc">Ticker (A-Z)</option>
+          <option value="currentPrice-desc">Price: High to Low</option>
+          <option value="currentPrice-asc">Price: Low to High</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto bg-gray-900 border border-gray-800 rounded-xl">
+      <table class="min-w-full divide-y divide-gray-800">
+        <thead class="bg-gray-950">
+          <tr>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ticker</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Current Price</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-emerald-400 uppercase tracking-wider">Target Structural Base</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Distance to Entry</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Robinhood Action Plan</th>
+            <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="watchlistBody" class="divide-y divide-gray-800 bg-gray-900/50">
+          </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // 1. DYNAMIC CONFIGURATION LOADER
+    // Safely reads global configurations mapped inside your separate config.js file
+    const firebaseConfig = window.APP_CONFIG.firebaseConfig;
+    const POLYGON_API_KEY = window.APP_CONFIG.polygonApiKey;
+
+    // Initialize Firebase Engine Instance
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // Track active Firestore unsubscribe hook listener
+    let unsubscribeWatchlist = null;
+
+    // ADD ENTER KEY LISTENER & DOM BOOTSTRAPPER
+    document.addEventListener("DOMContentLoaded", () => {
+      const input = document.getElementById("tickerInput");
+      if (input) {
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            event.preventDefault();
+            handleCalculateLocal();
+          }
+        });
+      }
+      // Initialize layout queries
+      updateWatchlistListener();
+    });
+
+    // 2. DYNAMIC LISTEN TO FIRESTORE (Handles Real-Time Live Sorting UI Changes)
+    function updateWatchlistListener() {
+      // If a sorting configuration modifies the current query, close the old snapshot listener stream
+      if (unsubscribeWatchlist) {
+        unsubscribeWatchlist();
+      }
+
+      const sortVal = document.getElementById("sortSelect").value;
+      const [field, direction] = sortVal.split("-"); // E.g., splits "currentPrice-desc" into ["currentPrice", "desc"]
+
+      // Bind dynamic parameters directly onto real-time data streaming layout
+      unsubscribeWatchlist = db.collection("watchlists")
+        .orderBy(field, direction)
+        .onSnapshot((snapshot) => {
+          const tbody = document.getElementById("watchlistBody");
+          tbody.innerHTML = "";
+
+          if(snapshot.empty) {
+            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 italic">No tickers added yet. Enter a symbol above to run the math engine.</td></tr>`;
+            return;
+          }
+
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+
+            const isReady = data.percentToEntry >= 0;
+            const badgeClass = isReady
+              ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
+              : "bg-amber-950 text-amber-400 border border-amber-800";
+            const badgeText = isReady ? "In Entry Zone" : `${data.percentToEntry}% to Top`;
+
+            const rowHtml = `
+              <tr class="hover:bg-gray-850/50 transition-colors">
+                <td class="px-6 py-4 whitespace-nowrap font-mono font-bold text-lg text-white">${data.ticker}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-gray-300 font-mono">$${data.currentPrice.toFixed(2)}</td>
+                <td class="px-6 py-4 whitespace-nowrap font-mono text-emerald-400 font-semibold bg-emerald-950/10">$${data.supportBaseMin.toFixed(2)} – $${data.supportBaseMax.toFixed(2)}</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClass}">${badgeText}</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                  Set Alert in Robinhood below <strong class="text-white font-mono bg-gray-950 px-2 py-1 rounded border border-gray-800">$${data.supportBaseMax.toFixed(2)}</strong>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <button onclick="handleDeleteTicker('${data.ticker}')" class="text-gray-500 hover:text-red-400 font-semibold text-sm transition-colors px-3 py-1 rounded hover:bg-red-950/20">
+                    Delete
+                  </button>
+                </td>
+              </tr>
+            `;
+            tbody.innerHTML += rowHtml;
+          });
+        }, (error) => {
+          console.error("Firestore live streaming transaction synchronization failed: ", error);
+        });
+    }
+
+    // 3. FRONTEND VOLUMETRIC MATH ENGINE
+    async function handleCalculateLocal() {
+      const input = document.getElementById("tickerInput");
+      const btn = document.getElementById("submitBtn");
+      const ticker = input.value.trim().toUpperCase();
+
+      if (!ticker) return;
+
+      btn.disabled = true;
+      btn.innerText = "Analyzing...";
+      btn.classList.add("opacity-50", "cursor-not-allowed");
+
+      try {
+        const endDate = new Date().toISOString().split("T")[0];
+        const startDateObj = new Date();
+        startDateObj.setDate(startDateObj.getDate() - 90);
+        const startDate = startDateObj.toISOString().split("T")[0];
+
+        const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc&apiKey=${POLYGON_API_KEY}`;
+        const response = await fetch(url);
+        const result = await response.json();
+
+        if (!result.results || result.results.length === 0) {
+          throw new Error(`No historical ticker results found for: ${ticker}`);
+        }
+
+        const candles = result.results;
+        const currentPrice = candles[candles.length - 1].c;
+        const priceFloorCutoff = currentPrice * 0.70;
+
+        const binSize = 0.50;
+        const volumeBins = {};
+
+        candles.forEach(candle => {
+          const avgPrice = (candle.h + candle.l + candle.c) / 3;
+
+          if (avgPrice >= priceFloorCutoff) {
+            const binnedPrice = Math.floor(avgPrice / binSize) * binSize;
+            if (!volumeBins[binnedPrice]) volumeBins[binnedPrice] = 0;
+            volumeBins[binnedPrice] += candle.v;
+          }
+        });
+
+        let highestVolumeBin = 0;
+        let maxVolume = 0;
+
+        Object.keys(volumeBins).forEach(bin => {
+          if (volumeBins[bin] > maxVolume) {
+            maxVolume = volumeBins[bin];
+            highestVolumeBin = parseFloat(bin);
+          }
+        });
+
+        if (highestVolumeBin === 0) {
+          candles.forEach(candle => {
+            const avgPrice = (candle.h + candle.l + candle.c) / 3;
+            const binnedPrice = Math.floor(avgPrice / binSize) * binSize;
+            if (!volumeBins[binnedPrice]) volumeBins[binnedPrice] = 0;
+            volumeBins[binnedPrice] += candle.v;
+          });
+          Object.keys(volumeBins).forEach(bin => {
+            if (volumeBins[bin] > maxVolume) {
+              maxVolume = volumeBins[bin];
+              highestVolumeBin = parseFloat(bin);
+            }
+          });
+        }
+
+        const supportBaseMin = highestVolumeBin;
+        const supportBaseMax = highestVolumeBin + binSize;
+        const percentToEntry = parseFloat((((supportBaseMax - currentPrice) / currentPrice) * 100).toFixed(1));
+
+        const payload = {
+          ticker,
+          currentPrice: parseFloat(currentPrice.toFixed(2)),
+          supportBaseMin: parseFloat(supportBaseMin.toFixed(2)),
+          supportBaseMax: parseFloat(supportBaseMax.toFixed(2)),
+          percentToEntry,
+          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        await db.collection("watchlists").doc(ticker).set(payload, { merge: true });
+        input.value = "";
+      } catch (error) {
+        alert("Engine Processing Error: " + error.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "Add Ticker";
+        btn.classList.remove("opacity-50", "cursor-not-allowed");
+      }
+    }
+
+    // 4. DELETE TICKER FROM FIRESTORE
+    async function handleDeleteTicker(ticker) {
+      if (!confirm(`Are you sure you want to remove ${ticker} from your dashboard?`)) return;
+
+      try {
+        await db.collection("watchlists").doc(ticker).delete();
+      } catch (error) {
+        alert("Error deleting ticker: " + error.message);
+      }
+    }
+  </script>
+</body>
+</html>

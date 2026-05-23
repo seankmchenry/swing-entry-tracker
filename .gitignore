@@ -1,0 +1,18 @@
+# --- Agents ---
+.agents/
+
+# --- Security / Local Credentials ---
+# This blocks your API and Firebase keys from going to GitLab
+public/config.js
+
+# --- Firebase CLI Overlays ---
+# Local Firebase cache, logs, and hosting configurations
+.firebase/
+.firebaserc
+firebase-debug.log
+ui-debug.log
+
+# --- System Garbage (Optional but recommended) ---
+# Prevents operating system thumbnail caches from cluttering your repo
+.DS_Store
+Thumbs.db
