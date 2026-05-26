@@ -22,10 +22,10 @@ exports.calculateSupportBase = onRequest({ cors: true }, async (req, res) => {
       return res.status(400).json({ error: "Missing 'ticker' parameter." });
     }
 
-    // 1. Calculate date window: Last 90 days
+    // 1. Calculate date window: Last 25 days
     const endDate = new Date().toISOString().split("T")[0];
     const startDateObj = new Date();
-    startDateObj.setDate(startDateObj.getDate() - 90);
+    startDateObj.setDate(startDateObj.getDate() - 25);
     const startDate = startDateObj.toISOString().split("T")[0];
 
     logger.info(`Fetching data for ${ticker} from ${startDate} to ${endDate}`);

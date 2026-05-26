@@ -9,32 +9,104 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="config.js"></script>
-</head>
-<body class="bg-gray-950 text-white font-sans min-h-screen">
 
-  <div class="p-6 max-w-6xl mx-auto">
+<style>
+    body.light-mode {
+      background-color: #f8fafc; /* slate-50 */
+      color: #0f172a; /* slate-900 */
+    }
+    body.light-mode .bg-gray-900 {
+      background-color: #ffffff !important;
+      border-color: #e2e8f0; /* slate-200 */
+    }
+    /* Force the table body background to invert cleanly */
+    body.light-mode #watchlistBody {
+      background-color: #ffffff !important;
+    }
+    body.light-mode .bg-gray-950,
+    body.light-mode .bg-gray-950\/10 {
+      background-color: #f1f5f9 !important;
+      border-color: #cbd5e1; /* slate-300 */
+    }
+    body.light-mode input,
+    body.light-mode select {
+      background-color: #ffffff;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+    body.light-mode select {
+      color: #334155;
+    }
+    body.light-mode input::placeholder {
+      color: #94a3b8;
+    }
+    body.light-mode .border-gray-800,
+    body.light-mode .divide-gray-800 > * {
+      border-color: #e2e8f0 !important;
+    }
+    body.light-mode thead.bg-gray-950 {
+      background-color: #f1f5f9 !important;
+    }
+    body.light-mode th {
+      color: #64748b; /* slate-500 */
+    }
+    /* Fix text contrast inside table rows */
+    body.light-mode tr {
+      color: #334155 !important;
+      border-color: #e2e8f0 !important;
+    }
+    body.light-mode td.text-white,
+    body.light-mode strong.text-white {
+      color: #0f172a !important;
+    }
+    body.light-mode td.text-gray-300,
+    body.light-mode td.text-gray-400 {
+      color: #334155 !important;
+    }
+    body.light-mode tr:hover {
+      background-color: #f8fafc !important;
+    }
+  </style>
+</head>
+<body class="bg-gray-950 text-white font-sans min-h-screen transition-colors duration-200">
+
+  <div class="p-6 max-w-7xl mx-auto">
     <div class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-emerald-400">⚡ Swing Entry Tracker</h1>
-        <p class="text-xs text-gray-400 mt-1">90-Day Macro Lookback with a 30% Low-Volume Price Filter</p>
+        <p class="text-xs text-gray-400 mt-1">Adaptive Volume Profile Engine — 30% Low-Volume Price Filter</p>
       </div>
+
+      <button onclick="toggleTheme()" id="themeBtn" class="flex items-center gap-2 bg-gray-900 border border-gray-800 hover:bg-gray-850 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors select-none">
+        ☀️ Light Mode
+      </button>
     </div>
 
     <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 mb-6 flex flex-col sm:flex-row gap-4 items-center">
-      <div class="flex gap-4 w-full sm:w-auto flex-grow">
-        <input type="text" id="tickerInput" placeholder="Enter Ticker (e.g. CIFR)" class="bg-gray-950 border border-gray-700 rounded-lg px-4 py-2 uppercase text-white font-mono focus:outline-none focus:border-emerald-500 flex-grow" />
+      <div class="flex flex-col md:flex-row gap-4 w-full flex-grow">
+        <input type="text" id="tickerInput" placeholder="Enter Ticker (e.g. CIFR)" class="bg-gray-950 border border-gray-700 rounded-lg px-4 py-2 uppercase text-white font-mono focus:outline-none focus:border-emerald-500 flex-grow" required />
         <button onclick="handleCalculateLocal()" id="submitBtn" class="bg-emerald-600 hover:bg-emerald-500 text-gray-950 font-bold px-6 py-2 rounded-lg transition-colors flex items-center justify-center min-w-[120px]">
           Add Ticker
         </button>
       </div>
 
-      <div class="flex items-center gap-2 w-full sm:w-auto justify-end border-t sm:border-t-0 border-gray-800 pt-4 sm:pt-0">
-        <label for="sortSelect" class="text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort By:</label>
-        <select id="sortSelect" onchange="updateWatchlistListener()" class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 font-medium focus:outline-none focus:border-emerald-500 cursor-pointer">
-          <option value="ticker-asc">Ticker (A-Z)</option>
-          <option value="currentPrice-desc">Price: High to Low</option>
-          <option value="currentPrice-asc">Price: Low to High</option>
-        </select>
+      <div class="flex flex-col md:flex-row items-center gap-4 w-full justify-end border-t sm:border-t-0 border-gray-800 pt-4 sm:pt-0">
+        <label class="inline-flex items-center cursor-pointer bg-gray-950 px-3 py-1.5 rounded-lg border border-gray-800 select-none w-full md:w-auto justify-between md:justify-start">
+          <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider me-3">🔥 Hot Sector (25d)</span>
+          <div class="relative">
+            <input type="checkbox" id="hotSectorToggle" class="sr-only peer">
+            <div class="w-9 h-5 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+          </div>
+        </label>
+
+        <div class="flex items-center gap-2 w-full md:w-auto justify-between md:justify-end">
+          <label for="sortSelect" class="text-xs font-semibold text-gray-400 uppercase tracking-wider whitespace-nowrap">Sort By:</label>
+          <select id="sortSelect" onchange="updateWatchlistListener()" class="bg-gray-950 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 font-medium focus:outline-none focus:border-emerald-500 cursor-pointer w-full md:w-auto">
+            <option value="ticker-asc">Ticker (A-Z)</option>
+            <option value="currentPrice-desc">Price: High to Low</option>
+            <option value="currentPrice-asc">Price: Low to High</option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -47,18 +119,18 @@
             <th class="px-6 py-4 text-left text-xs font-semibold text-emerald-400 uppercase tracking-wider">Target Structural Base</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Distance to Entry</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Robinhood Action Plan</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Horizon</th>
             <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
         <tbody id="watchlistBody" class="divide-y divide-gray-800 bg-gray-900/50">
-          </tbody>
+        </tbody>
       </table>
     </div>
   </div>
 
   <script>
     // 1. DYNAMIC CONFIGURATION LOADER
-    // Safely reads global configurations mapped inside your separate config.js file
     const firebaseConfig = window.APP_CONFIG.firebaseConfig;
     const POLYGON_API_KEY = window.APP_CONFIG.polygonApiKey;
 
@@ -66,10 +138,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
-    // Track active Firestore unsubscribe hook listener
     let unsubscribeWatchlist = null;
 
-    // ADD ENTER KEY LISTENER & DOM BOOTSTRAPPER
+    // ADD ENTER KEY LISTENER & THEME PERSISTENCE CHECKER
     document.addEventListener("DOMContentLoaded", () => {
       const input = document.getElementById("tickerInput");
       if (input) {
@@ -80,21 +151,39 @@
           }
         });
       }
-      // Initialize layout queries
+
+      // Check localStorage so theme choice persists on page refreshes
+      if (localStorage.getItem("theme") === "light") {
+        document.body.classList.add("light-mode");
+        document.getElementById("themeBtn").innerText = "🌙 Dark Mode";
+      }
+
       updateWatchlistListener();
     });
 
-    // 2. DYNAMIC LISTEN TO FIRESTORE (Handles Real-Time Live Sorting UI Changes)
+    // LIGHT / DARK MODE INTERFACE HANDLER
+    function toggleTheme() {
+      const isLight = document.body.classList.toggle("light-mode");
+      const btn = document.getElementById("themeBtn");
+
+      if (isLight) {
+        btn.innerText = "🌙 Dark Mode";
+        localStorage.setItem("theme", "light");
+      } else {
+        btn.innerText = "☀️ Light Mode";
+        localStorage.setItem("theme", "dark");
+      }
+    }
+
+    // 2. DYNAMIC LISTEN TO FIRESTORE
     function updateWatchlistListener() {
-      // If a sorting configuration modifies the current query, close the old snapshot listener stream
       if (unsubscribeWatchlist) {
         unsubscribeWatchlist();
       }
 
       const sortVal = document.getElementById("sortSelect").value;
-      const [field, direction] = sortVal.split("-"); // E.g., splits "currentPrice-desc" into ["currentPrice", "desc"]
+      const [field, direction] = sortVal.split("-");
 
-      // Bind dynamic parameters directly onto real-time data streaming layout
       unsubscribeWatchlist = db.collection("watchlists")
         .orderBy(field, direction)
         .onSnapshot((snapshot) => {
@@ -102,7 +191,7 @@
           tbody.innerHTML = "";
 
           if(snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500 italic">No tickers added yet. Enter a symbol above to run the math engine.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 italic">No tickers added yet. Enter a symbol above to run the math engine.</td></tr>`;
             return;
           }
 
@@ -115,6 +204,9 @@
               : "bg-amber-950 text-amber-400 border border-amber-800";
             const badgeText = isReady ? "In Entry Zone" : `${data.percentToEntry}% to Top`;
 
+            const horizonText = data.lookbackDays === 25 ? "🔥 25d Momentum" : "📊 90d Macro";
+            const horizonClass = data.lookbackDays === 25 ? "text-amber-400 font-bold" : "text-gray-400";
+
             const rowHtml = `
               <tr class="hover:bg-gray-850/50 transition-colors">
                 <td class="px-6 py-4 whitespace-nowrap font-mono font-bold text-lg text-white">${data.ticker}</td>
@@ -126,6 +218,7 @@
                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
                   Set Alert in Robinhood below <strong class="text-white font-mono bg-gray-950 px-2 py-1 rounded border border-gray-800">$${data.supportBaseMax.toFixed(2)}</strong>
                 </td>
+                <td class="px-6 py-4 whitespace-nowrap text-xs ${horizonClass}">${horizonText}</td>
                 <td class="px-6 py-4 whitespace-nowrap text-center">
                   <button onclick="handleDeleteTicker('${data.ticker}')" class="text-gray-500 hover:text-red-400 font-semibold text-sm transition-colors px-3 py-1 rounded hover:bg-red-950/20">
                     Delete
@@ -136,7 +229,7 @@
             tbody.innerHTML += rowHtml;
           });
         }, (error) => {
-          console.error("Firestore live streaming transaction synchronization failed: ", error);
+          console.error("Firestore transaction sync failed: ", error);
         });
     }
 
@@ -144,6 +237,7 @@
     async function handleCalculateLocal() {
       const input = document.getElementById("tickerInput");
       const btn = document.getElementById("submitBtn");
+      const hotSectorMode = document.getElementById("hotSectorToggle").checked;
       const ticker = input.value.trim().toUpperCase();
 
       if (!ticker) return;
@@ -152,10 +246,12 @@
       btn.innerText = "Analyzing...";
       btn.classList.add("opacity-50", "cursor-not-allowed");
 
+      const lookbackDays = hotSectorMode ? 25 : 90;
+
       try {
         const endDate = new Date().toISOString().split("T")[0];
         const startDateObj = new Date();
-        startDateObj.setDate(startDateObj.getDate() - 90);
+        startDateObj.setDate(startDateObj.getDate() - lookbackDays);
         const startDate = startDateObj.toISOString().split("T")[0];
 
         const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc&apiKey=${POLYGON_API_KEY}`;
@@ -218,6 +314,7 @@
           supportBaseMin: parseFloat(supportBaseMin.toFixed(2)),
           supportBaseMax: parseFloat(supportBaseMax.toFixed(2)),
           percentToEntry,
+          lookbackDays,
           lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         };
 
