@@ -16,3 +16,6 @@ ui-debug.log
 # Prevents operating system thumbnail caches from cluttering your repo
 .DS_Store
 Thumbs.db
+
+# NPM
+node_modules/

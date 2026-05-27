@@ -161,15 +161,23 @@ window.handleCalculateLocal = async function() {
 
   if (!ticker) return;
 
+  // LOCAL ENVIRONMENT CONDITIONAL DETECTOR
+  const isLocalhost = window.location.hostname === "localhost" ||
+                        window.location.hostname === "127.0.0.1";
+
   // CLOUDFLARE TURNSTILE SECURITY GUARD GATING LAYER
   if (window.turnstile && turnstileWidgetId !== null) {
     const turnstileToken = turnstile.getResponse(turnstileWidgetId);
 
-    if (!turnstileToken) {
+    // If we are on localhost, skip the token check. Otherwise, enforce it strictly!
+    if (isLocalhost) {
+      console.log("Local Environment Detected: Bypassing Cloudflare Turnstile verification shield.");
+    } else if (!turnstileToken) {
       alert("Security Alert: Threat telemetry validation unfulfilled. Submission blocked.");
       return;
+    } else {
+      console.log("Telemetry check fulfilled. Verification Hash:", turnstileToken);
     }
-    console.log("Telemetry check fulfilled. Verification Hash:", turnstileToken);
   }
 
   btn.disabled = true;
