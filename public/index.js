@@ -26,7 +26,16 @@ window.toggleTheme = function() {
   }
 }
 
-// 2. REAL-TIME WATCHLIST SNAPSHOT STREAM (Declared first so startup engine can call it)
+// HELPER FUNCTION TO FORMAT MARKET CAP VALUATIONS CLEANLY
+function formatMarketCap(num) {
+  if (!num || isNaN(num) || num <= 0) return "N/A";
+  if (num >= 1e12) return `$${(num / 1e12).toFixed(2)}T`;
+  if (num >= 1e9) return `$${(num / 1e9).toFixed(2)}B`;
+  if (num >= 1e6) return `$${(num / 1e6).toFixed(2)}M`;
+  return `$${num.toLocaleString()}`;
+}
+
+// 2. REAL-TIME WATCHLIST SNAPSHOT STREAM
 window.updateWatchlistListener = function() {
   if (unsubscribeWatchlist) {
     unsubscribeWatchlist();
@@ -44,7 +53,7 @@ window.updateWatchlistListener = function() {
       tbody.innerHTML = "";
 
       if (snapshot.empty) {
-        tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 italic">No tickers added yet. Enter a symbol above to run the math engine.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-gray-500 italic">No tickers added yet. Enter a symbol above to run the math engine.</td></tr>`;
         return;
       }
 
@@ -60,6 +69,9 @@ window.updateWatchlistListener = function() {
         const horizonText = data.lookbackDays === 25 ? "🔥 25d Momentum" : "📊 90d Macro";
         const horizonClass = data.lookbackDays === 25 ? "text-amber-400 font-bold" : "text-gray-400";
 
+        // Process dynamic text strings for market cap column display
+        const marketCapDisplay = formatMarketCap(data.marketCap);
+
         const rowHtml = `
           <tr class="hover:bg-gray-850/50 transition-colors">
             <td class="px-6 py-4 whitespace-nowrap font-mono font-bold text-lg text-white">${data.ticker}</td>
@@ -71,6 +83,7 @@ window.updateWatchlistListener = function() {
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
               Set alert below <strong class="text-white font-mono bg-gray-950 px-2 py-1 rounded border border-gray-800">$${data.supportBaseMax.toFixed(2)}</strong>
             </td>
+            <td class="px-6 py-4 whitespace-nowrap font-mono text-sm text-gray-300">${marketCapDisplay}</td>
             <td class="px-6 py-4 whitespace-nowrap text-xs ${horizonClass}">${horizonText}</td>
             <td class="px-6 py-4 whitespace-nowrap text-center">
               <button onclick="handleDeleteTicker('${data.ticker}')" class="text-gray-500 hover:text-red-400 font-semibold text-sm transition-colors px-3 py-1 rounded hover:bg-red-950/20">
@@ -129,7 +142,7 @@ function startupWorkspaceEngine() {
   }
 
   tryRenderTurnstile();
-  window.updateWatchlistListener(); // Executed securely now that it is initialized globally above
+  window.updateWatchlistListener();
 }
 
 // SELF-CHECKING INVOKER: Runs layout data arrays instantly
@@ -171,6 +184,7 @@ window.handleCalculateLocal = async function() {
     startDateObj.setDate(startDateObj.getDate() - lookbackDays);
     const startDate = startDateObj.toISOString().split("T")[0];
 
+    // Fetch Stable Unrestricted Candle Aggregates
     const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc&apiKey=${POLYGON_API_KEY}`;
     const response = await fetch(url);
     const result = await response.json();
@@ -182,6 +196,26 @@ window.handleCalculateLocal = async function() {
     const candles = result.results;
     const currentPrice = candles[candles.length - 1].c;
     const priceFloorCutoff = currentPrice * 0.70;
+
+    // PHASE 2: Unrestricted Multiplier Engine
+    let marketCap = 0;
+    try {
+      const detailUrl = `https://api.polygon.io/v3/reference/tickers/${ticker}?apiKey=${POLYGON_API_KEY}`;
+      const detailResponse = await fetch(detailUrl);
+      const detailResult = await detailResponse.json();
+
+      if (detailResult.results) {
+        // Fall back through the raw corporate share structures allowed on the free tier
+        const shares = detailResult.results.weighted_shares_outstanding ||
+                       detailResult.results.share_class_shares_outstanding;
+
+        if (shares && shares > 0) {
+          marketCap = shares * currentPrice;
+        }
+      }
+    } catch (snapErr) {
+      console.warn("Market Cap calculation bypassed:", snapErr);
+    }
 
     const binSize = 0.50;
     const volumeBins = {};
@@ -232,6 +266,7 @@ window.handleCalculateLocal = async function() {
       supportBaseMax: parseFloat(supportBaseMax.toFixed(2)),
       percentToEntry,
       lookbackDays,
+      marketCap: (marketCap && marketCap > 0) ? marketCap : 0,
       lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
     };
 
