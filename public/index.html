@@ -10,6 +10,17 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="config.js"></script>
 
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
+
+  <script>
+    (function() {
+      const script = document.createElement("script");
+      script.src = "index.js?v=" + Date.now();
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  </script>
+
   <style>
     :root {
       --darken-1: rgba(0, 0, 0, .0625);
@@ -17,21 +28,20 @@
       --darken-3: rgba(0, 0, 0, .25);
     }
     body.light-mode {
-      background-color: #f8fafc; /* slate-50 */
-      color: #0f172a; /* slate-900 */
+      background-color: #f8fafc;
+      color: #0f172a;
     }
     body.light-mode .bg-gray-900 {
       background-color: #ffffff !important;
-      border-color: #e2e8f0; /* slate-200 */
+      border-color: #e2e8f0;
     }
-    /* Force the table body background to invert cleanly */
     body.light-mode #watchlistBody {
       background-color: #ffffff !important;
     }
     body.light-mode .bg-gray-950,
     body.light-mode .bg-gray-950\/10 {
       background-color: #f1f5f9 !important;
-      border-color: #cbd5e1; /* slate-300 */
+      border-color: #cbd5e1;
     }
     body.light-mode input,
     body.light-mode select {
@@ -52,10 +62,9 @@
     body.light-mode thead.bg-gray-950 {
       background-color: #f1f5f9 !important;
     }
-    body.light-mode th {
-      color: #64748b; /* slate-500 */
+    body.light-mode Th {
+      color: #64748b;
     }
-    /* Fix text contrast inside table rows */
     body.light-mode tr {
       color: #334155 !important;
       border-color: #e2e8f0 !important;
@@ -93,7 +102,7 @@
     <div class="flex justify-between items-center mb-8 border-b border-gray-800 pb-4">
       <div>
         <h1 class="text-2xl font-bold tracking-tight text-emerald-400">⚡ Swing Entry Tracker</h1>
-        <p class="text-xs text-gray-400 mt-1">Adaptive Volume Profile Engine — 30% Low-Volume Price Filter</p>
+        <p class="text-xs text-gray-400 mt-1">Adaptive Volume Profile Engine — Secure Human Environment</p>
       </div>
 
       <button onclick="toggleTheme()" id="themeBtn" class="flex items-center gap-2 bg-gray-900 border border-gray-800 hover:bg-gray-850 px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors select-none">
@@ -102,9 +111,12 @@
     </div>
 
     <div class="bg-gray-900 p-4 rounded-xl border border-gray-800 mb-6 flex flex-col sm:flex-row gap-4 items-center">
-      <div class="flex flex-col md:flex-row gap-4 w-full flex-grow">
-        <input type="text" id="tickerInput" placeholder="Enter Ticker (e.g. CIFR)" class="bg-gray-950 border border-gray-700 rounded-lg px-4 py-2 uppercase text-white font-mono focus:outline-none focus:border-emerald-500 flex-grow" required />
-        <button onclick="handleCalculateLocal()" id="submitBtn" class="bg-emerald-500 text-gray-950 font-bold px-6 py-2 rounded-lg transition-colors flex items-center justify-center min-w-[120px]">
+      <div class="flex flex-col md:flex-row gap-4 w-full flex-grow items-center">
+        <input type="text" id="tickerInput" placeholder="Enter Ticker (e.g. CIFR)" class="bg-gray-950 border border-gray-700 rounded-lg px-4 py-2 uppercase text-white font-mono focus:outline-none focus:border-emerald-500 flex-grow w-full md:w-auto" required />
+
+        <div id="turnstile-container" class="hidden min-w-[1px] min-h-[1px]"></div>
+
+        <button onclick="handleCalculateLocal()" id="submitBtn" class="bg-emerald-500 text-gray-950 font-bold px-6 py-2 rounded-lg transition-colors flex items-center justify-center min-w-[120px] w-full md:w-auto">
           Add Ticker
         </button>
       </div>
@@ -134,11 +146,11 @@
         <thead class="bg-gray-950">
           <tr>
             <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Ticker</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Current Price</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 tracking-wider">Current Price</th>
             <th class="px-6 py-4 text-left text-xs font-semibold text-emerald-400 uppercase tracking-wider">Target Structural Base</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Distance to Entry</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Robinhood Action Plan</th>
-            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">Horizon</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 tracking-wider">Distance to Entry</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 tracking-wider">Robinhood Action Plan</th>
+            <th class="px-6 py-4 text-left text-xs font-semibold text-gray-400 tracking-wider">Horizon</th>
             <th class="px-6 py-4 text-center text-xs font-semibold text-gray-400 uppercase tracking-wider">Actions</th>
           </tr>
         </thead>
@@ -147,217 +159,5 @@
       </table>
     </div>
   </div>
-
-  <script>
-    // 1. DYNAMIC CONFIGURATION LOADER
-    const firebaseConfig = window.APP_CONFIG.firebaseConfig;
-    const POLYGON_API_KEY = window.APP_CONFIG.polygonApiKey;
-
-    // Initialize Firebase Engine Instance
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    let unsubscribeWatchlist = null;
-
-    // ADD ENTER KEY LISTENER & THEME PERSISTENCE CHECKER
-    document.addEventListener("DOMContentLoaded", () => {
-      const input = document.getElementById("tickerInput");
-      if (input) {
-        input.addEventListener("keydown", (event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            handleCalculateLocal();
-          }
-        });
-      }
-
-      // Check localStorage so theme choice persists on page refreshes
-      if (localStorage.getItem("theme") === "light") {
-        document.body.classList.add("light-mode");
-        document.getElementById("themeBtn").innerText = "🌙 Dark Mode";
-      }
-
-      updateWatchlistListener();
-    });
-
-    // LIGHT / DARK MODE INTERFACE HANDLER
-    function toggleTheme() {
-      const isLight = document.body.classList.toggle("light-mode");
-      const btn = document.getElementById("themeBtn");
-
-      if (isLight) {
-        btn.innerText = "🌙 Dark Mode";
-        localStorage.setItem("theme", "light");
-      } else {
-        btn.innerText = "☀️ Light Mode";
-        localStorage.setItem("theme", "dark");
-      }
-    }
-
-    // 2. DYNAMIC LISTEN TO FIRESTORE
-    function updateWatchlistListener() {
-      if (unsubscribeWatchlist) {
-        unsubscribeWatchlist();
-      }
-
-      const sortVal = document.getElementById("sortSelect").value;
-      const [field, direction] = sortVal.split("-");
-
-      unsubscribeWatchlist = db.collection("watchlists")
-        .orderBy(field, direction)
-        .onSnapshot((snapshot) => {
-          const tbody = document.getElementById("watchlistBody");
-          tbody.innerHTML = "";
-
-          if(snapshot.empty) {
-            tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500 italic">No tickers added yet. Enter a symbol above to run the math engine.</td></tr>`;
-            return;
-          }
-
-          snapshot.forEach((doc) => {
-            const data = doc.data();
-
-            const isReady = data.percentToEntry >= 0;
-            const badgeClass = isReady
-              ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-              : "bg-amber-950 text-amber-400 border border-amber-800";
-            const badgeText = isReady ? "In Entry Zone" : `${data.percentToEntry}% to Top`;
-
-            const horizonText = data.lookbackDays === 25 ? "🔥 25d Momentum" : "📊 90d Macro";
-            const horizonClass = data.lookbackDays === 25 ? "text-amber-400 font-bold" : "text-gray-400";
-
-            const rowHtml = `
-              <tr class="hover:bg-gray-850/50 transition-colors">
-                <td class="px-6 py-4 whitespace-nowrap font-mono font-bold text-lg text-white">${data.ticker}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-gray-300 font-mono">$${data.currentPrice.toFixed(2)}</td>
-                <td class="px-6 py-4 whitespace-nowrap font-mono text-emerald-400 font-semibold bg-emerald-950/10">$${data.supportBaseMin.toFixed(2)} – $${data.supportBaseMax.toFixed(2)}</td>
-                <td class="px-6 py-4 whitespace-nowrap">
-                  <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClass}">${badgeText}</span>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
-                  Set Alert in Robinhood below <strong class="text-white font-mono bg-gray-950 px-2 py-1 rounded border border-gray-800">$${data.supportBaseMax.toFixed(2)}</strong>
-                </td>
-                <td class="px-6 py-4 whitespace-nowrap text-xs ${horizonClass}">${horizonText}</td>
-                <td class="px-6 py-4 whitespace-nowrap text-center">
-                  <button onclick="handleDeleteTicker('${data.ticker}')" class="text-gray-500 hover:text-red-400 font-semibold text-sm transition-colors px-3 py-1 rounded hover:bg-red-950/20">
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            `;
-            tbody.innerHTML += rowHtml;
-          });
-        }, (error) => {
-          console.error("Firestore transaction sync failed: ", error);
-        });
-    }
-
-    // 3. FRONTEND VOLUMETRIC MATH ENGINE
-    async function handleCalculateLocal() {
-      const input = document.getElementById("tickerInput");
-      const btn = document.getElementById("submitBtn");
-      const hotSectorMode = document.getElementById("hotSectorToggle").checked;
-      const ticker = input.value.trim().toUpperCase();
-
-      if (!ticker) return;
-
-      btn.disabled = true;
-      btn.innerText = "Analyzing...";
-      btn.classList.add("opacity-50", "cursor-not-allowed");
-
-      const lookbackDays = hotSectorMode ? 25 : 90;
-
-      try {
-        const endDate = new Date().toISOString().split("T")[0];
-        const startDateObj = new Date();
-        startDateObj.setDate(startDateObj.getDate() - lookbackDays);
-        const startDate = startDateObj.toISOString().split("T")[0];
-
-        const url = `https://api.polygon.io/v2/aggs/ticker/${ticker}/range/1/day/${startDate}/${endDate}?adjusted=true&sort=asc&apiKey=${POLYGON_API_KEY}`;
-        const response = await fetch(url);
-        const result = await response.json();
-
-        if (!result.results || result.results.length === 0) {
-          throw new Error(`No historical ticker results found for: ${ticker}`);
-        }
-
-        const candles = result.results;
-        const currentPrice = candles[candles.length - 1].c;
-        const priceFloorCutoff = currentPrice * 0.70;
-
-        const binSize = 0.50;
-        const volumeBins = {};
-
-        candles.forEach(candle => {
-          const avgPrice = (candle.h + candle.l + candle.c) / 3;
-
-          if (avgPrice >= priceFloorCutoff) {
-            const binnedPrice = Math.floor(avgPrice / binSize) * binSize;
-            if (!volumeBins[binnedPrice]) volumeBins[binnedPrice] = 0;
-            volumeBins[binnedPrice] += candle.v;
-          }
-        });
-
-        let highestVolumeBin = 0;
-        let maxVolume = 0;
-
-        Object.keys(volumeBins).forEach(bin => {
-          if (volumeBins[bin] > maxVolume) {
-            maxVolume = volumeBins[bin];
-            highestVolumeBin = parseFloat(bin);
-          }
-        });
-
-        if (highestVolumeBin === 0) {
-          candles.forEach(candle => {
-            const avgPrice = (candle.h + candle.l + candle.c) / 3;
-            const binnedPrice = Math.floor(avgPrice / binSize) * binSize;
-            if (!volumeBins[binnedPrice]) volumeBins[binnedPrice] = 0;
-            volumeBins[binnedPrice] += candle.v;
-          });
-          Object.keys(volumeBins).forEach(bin => {
-            if (volumeBins[bin] > maxVolume) {
-              maxVolume = volumeBins[bin];
-              highestVolumeBin = parseFloat(bin);
-            }
-          });
-        }
-
-        const supportBaseMin = highestVolumeBin;
-        const supportBaseMax = highestVolumeBin + binSize;
-        const percentToEntry = parseFloat((((supportBaseMax - currentPrice) / currentPrice) * 100).toFixed(1));
-
-        const payload = {
-          ticker,
-          currentPrice: parseFloat(currentPrice.toFixed(2)),
-          supportBaseMin: parseFloat(supportBaseMin.toFixed(2)),
-          supportBaseMax: parseFloat(supportBaseMax.toFixed(2)),
-          percentToEntry,
-          lookbackDays,
-          lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        };
-
-        await db.collection("watchlists").doc(ticker).set(payload, { merge: true });
-        input.value = "";
-      } catch (error) {
-        alert("Engine Processing Error: " + error.message);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = "Add Ticker";
-        btn.classList.remove("opacity-50", "cursor-not-allowed");
-      }
-    }
-
-    // 4. DELETE TICKER FROM FIRESTORE
-    async function handleDeleteTicker(ticker) {
-      if (!confirm(`Are you sure you want to remove ${ticker} from your dashboard?`)) return;
-
-      try {
-        await db.collection("watchlists").doc(ticker).delete();
-      } catch (error) {
-        alert("Error deleting ticker: " + error.message);
-      }
-    }
-  </script>
 </body>
 </html>
