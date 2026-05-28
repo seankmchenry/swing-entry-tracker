@@ -62,8 +62,8 @@ window.updateWatchlistListener = function() {
 
         const isReady = data.percentToEntry >= 0;
         const badgeClass = isReady
-          ? "bg-emerald-950 text-emerald-400 border border-emerald-800"
-          : "bg-amber-950 text-amber-400 border border-amber-800";
+          ? "bg-emerald-800 text-emerald-400 border border-emerald-800"
+          : "bg-amber-900 text-amber-400 border border-amber-800";
         const badgeText = isReady ? "In Entry Zone" : `${data.percentToEntry}% to Top`;
 
         const horizonText = data.lookbackDays === 25 ? "🔥 25d Momentum" : "📊 90d Macro";
@@ -76,7 +76,7 @@ window.updateWatchlistListener = function() {
           <tr class="hover:bg-gray-850/50 transition-colors">
             <td class="px-6 py-4 whitespace-nowrap font-mono font-bold text-lg text-white">${data.ticker}</td>
             <td class="px-6 py-4 whitespace-nowrap text-gray-300 font-mono">$${data.currentPrice.toFixed(2)}</td>
-            <td class="px-6 py-4 whitespace-nowrap font-mono text-emerald-400 font-semibold bg-emerald-950/10">$${data.supportBaseMin.toFixed(2)} – $${data.supportBaseMax.toFixed(2)}</td>
+            <td class="px-6 py-4 whitespace-nowrap font-mono text-emerald-400 font-semibold bg-emerald-800/10">$${data.supportBaseMin.toFixed(2)} – $${data.supportBaseMax.toFixed(2)}</td>
             <td class="px-6 py-4 whitespace-nowrap">
               <span class="px-2.5 py-1 text-xs font-semibold rounded-full ${badgeClass}">${badgeText}</span>
             </td>
